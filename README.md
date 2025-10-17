@@ -1,2 +1,402 @@
-# hogwarts-sorting-hat-bot
-tg bot
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Распределяющая Шляпа — WebApp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#d3b36c;--paper:#f5e6c0;--glass:rgba(0,0,0,.55);--shadow:0 10px 30px #0006}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}body{font-family:'Cinzel',serif,system-ui,sans-serif;background:#000;color:#fff}
+.screen{display:none;width:100%;height:100vh;position:relative}.show{display:block}button{cursor:pointer}
+/* start */
+#screen-start{background:url('https://www.dropbox.com/scl/fi/9hpl00fld42suyoje2w8q/16.10.25-20-48-17.jpg?rlkey=98tp7u328o2z75i2yfinsgjn9&raw=1') center/cover no-repeat;animation:fadein 1.2s ease;overflow:hidden}
+#btn-start{position:absolute;left:50%;bottom:60px;transform:translateX(-50%);background:rgba(20,12,0,.85);color:var(--paper);border:2px solid var(--gold);padding:14px 32px;border-radius:12px;font-weight:700;letter-spacing:.04em;font-size:18px;text-shadow:0 0 10px #000;box-shadow:var(--shadow);transition:all 0.3s ease;z-index:10;animation:float 3s ease-in-out infinite}
+#btn-start:hover{background:rgba(40,25,5,.95);transform:translateX(-50%) scale(1.05);box-shadow:0 0 24px #d3b36c99}
+
+/* Кнопка управления музыкой */
+.music-control{position:absolute;top:20px;right:20px;background:rgba(20,12,0,.75);color:var(--paper);border:1px solid var(--gold);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:100;transition:all 0.3s ease;font-size:18px}
+.music-control:hover{background:rgba(40,25,5,.9);transform:scale(1.1)}
+
+/* Анимация плавающей кнопки */
+@keyframes float{
+  0%,100%{transform:translateX(-50%) translateY(0px);}
+  50%{transform:translateX(-50%) translateY(-5px);}
+}
+
+/* Анимация шляпы */
+.hat-animation{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none}
+.hat-animation::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:url('https://www.dropbox.com/scl/fi/9hpl00fld42suyoje2w8q/16.10.25-20-48-17.jpg?rlkey=98tp7u328o2z75i2yfinsgjn9&raw=1') center/cover no-repeat;animation:hatSway 8s ease-in-out infinite}
+
+/* Анимация свечей */
+.candle-flicker{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:0.6}
+.candle-flicker::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 20% 30%, rgba(255,200,100,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 40%, rgba(255,180,80,0.2) 0%, transparent 50%), radial-gradient(circle at 40% 70%, rgba(255,220,120,0.25) 0%, transparent 50%);animation:candleFlicker 3s ease-in-out infinite alternate}
+
+@keyframes hatSway{
+  0%,100%{transform:rotate(0deg) scale(1);}
+  25%{transform:rotate(0.5deg) scale(1.001);}
+  50%{transform:rotate(-0.3deg) scale(1);}
+  75%{transform:rotate(0.2deg) scale(1.002);}
+}
+
+@keyframes candleFlicker{
+  0%,100%{opacity:0.4;filter:blur(1px);transform:scale(1);}
+  25%{opacity:0.6;filter:blur(0.5px);transform:scale(1.02);}
+  50%{opacity:0.5;filter:blur(0.8px);transform:scale(0.98);}
+  75%{opacity:0.7;filter:blur(0.3px);transform:scale(1.01);}
+}
+
+/* quiz */
+#screen-quiz{background:url('https://www.dropbox.com/scl/fi/q3leze43a80byj0w29nrf/17.10.25-12-56-05.jpg?rlkey=4cuc8f2bfxtklvf773i29zm0z&st=3ectporj&dl=1') center/cover no-repeat;position:relative;overflow:hidden}
+.quiz{width:min(920px,94vw);margin:0 auto;padding:48px 18px 24px;background:rgba(0,0,0,.65);backdrop-filter:blur(5px);border-radius:12px;box-shadow:var(--shadow);border:1px solid rgba(211,179,108,0.3);position:relative;z-index:2}
+.badge{display:inline-block;padding:.38rem .7rem;border:1px solid #ffffff2a;border-radius:999px;font-size:13px;color:#ddd;background:#00000042}
+.progress{height:6px;background:#1c1b28;border-radius:999px;overflow:hidden;margin:14px 0 22px}
+.bar{height:100%;width:0;background:linear-gradient(90deg,#c6a66b,#e5d5a3);transition:width .35s ease}
+.q{font-size:clamp(20px,2.8vw,28px);margin:8px 0 18px;text-shadow:0 2px 8px #0008;line-height:1.35}
+.answers{display:grid;gap:10px}@media(min-width:640px){.answers{grid-template-columns:1fr 1fr}}
+.answers button{background:#ffffff14;color:#fff;border:1px solid #ffffff28;padding:15px;border-radius:12px;font-size:16px;text-align:left;transition:all .15s ease;backdrop-filter:blur(2px)}
+.answers button:hover{background:#ffffff28;border-color:#ffffff40;transform:translateY(-1px)}
+.answers button:active{transform:scale(.985)}
+
+/* Магические анимации для экрана вопросов */
+.magic-candles{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.flying-candle{position:absolute;font-size:24px;animation:flyingCandle 8s linear infinite;opacity:0;filter:drop-shadow(0 0 8px rgba(255,200,100,0.8))}
+.flying-wand{position:absolute;font-size:28px;animation:flyingWand 6s linear infinite;opacity:0;filter:drop-shadow(0 0 10px rgba(100,200,255,0.8))}
+.flying-broom{position:absolute;font-size:22px;animation:flyingBroom 10s linear infinite;opacity:0;filter:drop-shadow(0 0 6px rgba(200,100,255,0.8))}
+
+@keyframes flyingCandle{
+  0%{transform:translateX(-50px) translateY(100vh) rotate(0deg);opacity:1}
+  20%{opacity:0.8}
+  80%{opacity:0.6}
+  100%{transform:translateX(calc(100vw + 100px)) translateY(-100px) rotate(360deg);opacity:0}
+}
+
+@keyframes flyingWand{
+  0%{transform:translateX(100vw) translateY(50vh) rotate(0deg);opacity:1}
+  30%{opacity:0.9}
+  70%{opacity:0.7}
+  100%{transform:translateX(-100px) translateY(calc(100vh + 100px)) rotate(-720deg);opacity:0}
+}
+
+@keyframes flyingBroom{
+  0%{transform:translateX(50vw) translateY(-50px) rotate(0deg);opacity:1}
+  25%{opacity:0.8}
+  75%{opacity:0.6}
+  100%{transform:translateX(calc(100vw - 100px)) translateY(calc(100vh + 50px)) rotate(180deg);opacity:0}
+}
+
+/* result - ОБНОВЛЕННЫЕ СТИЛИ */
+#screen-result{background:#000;background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden;position:relative}
+.result{width:min(920px,94vw);padding:24px;border-radius:18px;background:var(--glass);border:1px solid #ffffff24;box-shadow:0 20px 60px #0008;text-align:center;position:relative;z-index:2;animation:fadein 1.1s ease}
+.crest{width:120px;height:120px;margin:0 auto 12px;border-radius:50%;object-fit:cover;border:3px solid var(--gold);box-shadow:0 0 30px rgba(211,179,108,0.5), 0 0 60px rgba(211,179,108,0.3);background:#000;animation:crestGlow 3s ease-in-out infinite alternate}
+.hat-quote{font-size:clamp(18px,2.8vw,24px);font-weight:700;letter-spacing:.03em;margin:8px 0 16px;min-height:60px;display:flex;align-items:center;justify-content:center;text-shadow:0 0 15px currentColor;animation:fadeInText 1.5s ease}
+.desc{color:#eee;line-height:1.5;margin:12px 0 16px;font-size:clamp(14px,1.8vw,16px);animation:fadeInText 2s ease}
+.tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:16px;animation:fadeInText 2.5s ease}
+.tag{border:1px solid #ffffff40;border-radius:999px;padding:6px 12px;font-size:12px;color:#f0f0f0;background:linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));backdrop-filter:blur(10px);box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.famous{color:#f3f3ff;font-size:14px;opacity:.85;margin-bottom:16px;animation:fadeInText 3s ease}
+.founder-history{color:#ddd;font-size:13px;line-height:1.4;margin:12px 0;padding:12px;background:rgba(0,0,0,0.3);border-radius:8px;border-left:2px solid var(--gold);animation:fadeInText 3.5s ease}
+.history-toggle{background:transparent;color:var(--gold);border:1px solid var(--gold);padding:6px 12px;border-radius:6px;font-size:12px;margin-top:8px;cursor:pointer;transition:all 0.3s ease}
+.history-toggle:hover{background:rgba(211,179,108,0.1)}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:20px}
+.primary,.ghost{padding:12px 20px;border-radius:12px;font-weight:700;border:1px solid transparent;transition:all .3s;font-size:14px}
+.primary{background:linear-gradient(180deg,#2a2430,#1e1722);color:#fff;border-color:#3d3342}
+.primary:hover{filter:brightness(1.15)}
+.ghost{background:transparent;color:#fff;border-color:#ffffff28}
+.ghost:hover{background:#ffffff14}
+
+/* Новые анимации */
+@keyframes crestGlow{
+  0%{box-shadow:0 0 20px rgba(211,179,108,0.4), 0 0 40px rgba(211,179,108,0.2);}
+  100%{box-shadow:0 0 30px rgba(211,179,108,0.6), 0 0 60px rgba(211,179,108,0.4);}
+}
+
+@keyframes fadeInText{
+  0%{opacity:0;transform:translateY(10px);}
+  100%{opacity:1;transform:translateY(0);}
+}
+
+@keyframes hatWhisper{
+  0%{opacity:0;transform:scale(0.8) translateY(10px);}
+  100%{opacity:1;transform:scale(1) translateY(0);}
+}
+
+.hat-whisper{animation:hatWhisper 1.5s ease-out;color:var(--gold);text-shadow:0 0 20px currentColor}
+
+/* magic */
+.magic{position:absolute;inset:0;overflow:hidden;z-index:1;pointer-events:none}
+.spark{position:absolute;width:3px;height:3px;background:#fff8d4;border-radius:50%;opacity:.75;filter:blur(1px);animation:rise 8s linear infinite}
+.glow{position:absolute;inset:-20%;background:radial-gradient(60% 40% at 50% 80%,#fff2 0%,#0000 60%);mix-blend-mode:screen;opacity:.35;animation:pulse 6s ease-in-out infinite}
+@keyframes rise{0%{transform:translateY(100vh) scale(.5);opacity:0}10%{opacity:.95}90%{opacity:.7}100%{transform:translateY(-10vh) scale(1.1);opacity:0}}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:.25}50%{opacity:.45}}
+
+/* Адаптация для iPhone 13 Pro и других мобильных */
+@media (max-width: 390px) and (max-height: 845px) {
+  .result{padding:20px 16px;margin:10px;}
+  .crest{width:100px;height:100px;margin-bottom:10px;}
+  .hat-quote{min-height:50px;margin:6px 0 12px;font-size:16px;}
+  .desc{margin:10px 0 14px;font-size:14px;}
+  .tags{margin-bottom:12px;}
+  .tag{padding:4px 10px;font-size:11px;}
+  .famous{font-size:13px;margin-bottom:12px;}
+  .founder-history{font-size:12px;padding:10px;margin:10px 0;}
+  .actions{gap:8px;margin-top:16px;}
+  .primary,.ghost{padding:10px 16px;font-size:13px;}
+}
+
+/* Убираем скролл на всех экранах */
+html, body {overflow:hidden; touch-action:pan-y;}
+.screen {overflow:hidden;}
+</style>
+</head>
+<body>
+<!-- Аудио элемент для фоновой музыки -->
+<audio id="background-music" loop>
+  <source src="https://www.dropbox.com/scl/fi/m8ckie2mqoym9uy731ap0/21071.mp3?rlkey=i153x2jt5gnv96pxt44am1aee&st=7jiu3jaj&dl=1" type="audio/mpeg">
+</audio>
+
+<section id="screen-start" class="screen show">
+  <div class="music-control" id="music-toggle">🎵</div>
+  <div class="hat-animation"></div>
+  <div class="candle-flicker"></div>
+  <button id="btn-start">НАЧАТЬ РАСПРЕДЕЛЕНИЕ</button>
+</section>
+
+<section id="screen-quiz" class="screen">
+  <div class="music-control" id="music-toggle-quiz">🎵</div>
+  <div class="magic-candles" id="magic-candles"></div>
+  <div class="quiz">
+    <div class="badge" id="badge">Вопрос 1 из 15</div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <h2 id="q" class="q"></h2>
+    <div id="answers" class="answers"></div>
+  </div>
+</section>
+
+<section id="screen-result" class="screen">
+  <div class="music-control" id="music-toggle-result">🎵</div>
+  <div class="magic" id="magic"><div class="glow"></div></div>
+  <div class="result">
+    <img id="crest" class="crest" alt="Герб факультета">
+    <div id="hat-quote" class="hat-quote"></div>
+    <p id="desc" class="desc"></p>
+    <div id="tags" class="tags"></div>
+    <div id="famous" class="famous"></div>
+    <div id="founder-container" style="display:none;">
+      <div id="founder-history" class="founder-history"></div>
+      <button class="history-toggle" id="history-toggle">Скрыть историю</button>
+    </div>
+    <div class="actions">
+      <button class="primary" id="again">Пройти ещё раз</button>
+      <button class="ghost" id="share">Поделиться результатом</button>
+    </div>
+  </div>
+</section>
+
+<script>
+/* ===== ДАННЫЕ ФАКУЛЬТЕТОВ ===== */
+const HOUSES={
+ GRYF:{name:"Гриффиндор",emoji:"🦁",
+  bg:"url('https://www.dropbox.com/scl/fi/4esz69ihrjdbf4fswvo3w/17.10.25-11-41-53-1.jpg?rlkey=s6qmem824w5mmvibi0cxka7v2&st=map12ioh&dl=1')",
+  crest:"https://www.dropbox.com/scl/fi/wq1w5euk7troiavp1uz23/17.10.25-10-59-23.jpg?rlkey=anpi8o66dl9wbiarq3gd893na&st=i15lk6sz&dl=1",
+  desc:"Факультет храбрых, благородных и честных. Здесь ценят смелость, честь и преданность друзьям.",
+  quote:"Шляпа задумчиво молчит… и вдруг шепчет: Гриффиндор!",
+  tags:["смелость","честь","преданность"],
+  famous:"Гарри Поттер, Гермиона Грейнджер, Альбус Дамблдор",
+  founder:"Годрик Гриффиндор — один из величайших волшебников своего времени, известный своей храбростью и рыцарскими идеалами. Он верил, что истинная сила заключается в смелости защищать то, что дорого, и всегда стоять на стороне справедливости."},
+ SLY:{name:"Слизерин",emoji:"🐍",
+  bg:"url('https://www.dropbox.com/scl/fi/vj0cuyhbhrv7dofby3xhe/17.10.25-11-41-54-1.jpg?rlkey=q365bh83moqwk04ku1b73yn1u&st=vmbqth1t&dl=1')",
+  crest:"https://www.dropbox.com/scl/fi/s7q8vp6ktf6bhlspdoyt3/17.10.25-11-01-35.jpg?rlkey=8113zkmyl2m6qu8weg9vm1bjf&st=5wdbwdq3&dl=1",
+  desc:"Факультет амбиций, хитрости и решительности. Его ученики дальновидны и не боятся риска.",
+  quote:"Шляпа задумчиво молчит… и вдруг шепчет: Слизерин!",
+  tags:["амбиции","хитрость","решительность"],
+  famous:"Северус Снегг, Драко Малфой, Том Риддл",
+  founder:"Салазар Слизерин — могущественный волшебник, ценивший чистоту крови и амбиции. Он верил, что только волшебники из чистокровных семей достойны учиться магии, и создал Тайную комнату для защиты наследия Хогвартса."},
+ RAV:{name:"Когтевран",emoji:"🪄",
+  bg:"url('https://www.dropbox.com/scl/fi/ba0c6lr5hpsf85fsow91b/17.10.25-11-41-54.jpg?rlkey=m4qjusu6zyz1131x734dgmkbq&st=fvmxhmkc&dl=1')",
+  crest:"https://www.dropbox.com/scl/fi/7l0044yjn3kqfopqs06ns/17.10.25-12-35-07.jpg?rlkey=35hprzmarxy1x2wja1usrtpq6&st=bgswes52&dl=1",
+  desc:"Здесь ценят ум, мудрость и творческое мышление. Студенты наблюдательны и изобретательны.",
+  quote:"Шляпа задумчиво молчит… и вдруг шепчет: Когтевран!",
+  tags:["ум","мудрость","изобретательность"],
+  famous:"Луна Лавгуд, Филиус Флитвик, Чжоу Чанг",
+  founder:"Кандида Когтевран — одна из самых блестящих волшебниц своего времени, известная своей мудростью и творческим подходом к магии. Она создала меняющуюся планировку Хогвартса и верила, что знание — величайшее сокровище."},
+ HUF:{name:"Пуффендуй",emoji:"🦡",
+  bg:"url('https://www.dropbox.com/scl/fi/k1k7nfnw0zcqdbzyzrwhu/17.10.25-11-41-53.jpg?rlkey=zqa6sw1ccikq4flbxg9xdenal&st=b21sphcl&dl=1')",
+  crest:"https://www.dropbox.com/scl/fi/madd7q6kf6az57f9xgufx/17.10.25-10-59-23-1.jpg?rlkey=fhd78lqxhnxodcq3uaefazzf9&st=dfdedqiy&dl=1",
+  desc:"Самые добрые и трудолюбивые. Здесь учат верности, честности и заботе о других.",
+  quote:"Шляпа задумчиво молчит… и вдруг шепчет: Пуффендуй!",
+  tags:["доброта","трудолюбие","верность"],
+  famous:"Нимфадора Тонкс, Седрик Диггори, Помона Стебль",
+  founder:"Пенелопа Пуффендуй — добрая и справедливая волшебница, известная своей заботой о всех живых существах. Она создала систему домашних эльфов Хогвартса и верила, что трудолюбие и верность — основа истинной магии."}
+};
+
+/* ===== ПИТАННЯ (15) ===== */
+const QUESTIONS=[
+{q:"Когда ты стоишь перед неизвестным — что чувствуешь прежде всего?",a:{А:["Любопытство","RAV"],Б:["Азарт","GRYF"],В:["Осторожность","HUF"],Г:["Недоверие","SLY"]}},
+{q:"Тебе предлагают силу, но за неё нужно заплатить чем-то важным. Что ты сделаешь?",a:{А:["Приму — всё имеет цену","SLY"],Б:["Откажусь, мне и так хватает","HUF"],В:["Попробую обойти условия","RAV"],Г:["Возьму, если это ради цели","GRYF"]}},
+{q:"Если бы у тебя была возможность стереть одно воспоминание, ты бы сделал это?",a:{А:["Да, не всё стоит помнить","HUF"],Б:["Нет, прошлое делает меня тем, кто я есть","GRYF"],В:["Только если оно мешает двигаться дальше","RAV"],Г:["Зачем стирать, если можно использовать?","SLY"]}},
+{q:"Ты идёшь по тёмному коридору и слышишь крик. Что сделаешь?",a:{А:["Побегу на звук","GRYF"],Б:["Осторожно проверю","RAV"],В:["Спрячусь и понаблюдаю","SLY"],Г:["Позову кого-то на помощь","HUF"]}},
+{q:"Если кто-то пользуется твоей добротой, ты…",a:{А:["Проучу его","SLY"],Б:["Просто отдалюсь","HUF"],В:["Попробую понять причину","RAV"],Г:["Сделаю вид, что не заметил","GRYF"]}},
+{q:"Ты узнаёшь чужую тайну. Что дальше?",a:{А:["Сохраню в секрете","HUF"],Б:["Подожду, пока это пригодится","SLY"],В:["Скажу тому, кому это может навредить","GRYF"],Г:["Расскажу, если это спасёт кого-то","RAV"]}},
+{q:"Что тебе проще — простить или забыть?",a:{А:["Простить","HUF"],Б:["Забыть","RAV"],В:["Ни то, ни другое","SLY"],Г:["Всё зависит от человека","GRYF"]}},
+{q:"Когда кто-то лучше тебя, ты…",a:{А:["Учусь у него","RAV"],Б:["Стараюсь обогнать","GRYF"],В:["Радуюсь его успеху","HUF"],Г:["Не показываю, что это меня задело","SLY"]}},
+{q:"Ты получил власть, но никто не знает об этом. Что ты сделаешь?",a:{А:["Буду использовать её осторожно","RAV"],Б:["Найду, где она принесёт пользу","HUF"],В:["Спрячу — тайна надёжнее силы","SLY"],Г:["Протестирую её на деле","GRYF"]}},
+{q:"Если друг предал тебя, что сильнее — боль или злость?",a:{А:["Боль","HUF"],Б:["Злость","SLY"],В:["Разочарование","RAV"],Г:["Понимание","GRYF"]}},
+{q:"Что для тебя значит слово «честь»?",a:{А:["Верность себе","GRYF"],Б:["Правила, которых нельзя нарушать","HUF"],В:["Иллюзия, созданная обществом","SLY"],Г:["Защита тех, кто дорог","RAV"]}},
+{q:"Ты находишь старую книгу, полную опасных знаний. Что ты сделаешь?",a:{А:["Изучу, несмотря на риск","RAV"],Б:["Спрячу подальше","HUF"],В:["Использую, если придётся","SLY"],Г:["Поделюсь с тем, кто мудрее","GRYF"]}},
+{q:"Если дают выбор между лёгким путём и правильным, что выберешь?",a:{А:["Правильный, даже если больно","GRYF"],Б:["Лёгкий — зачем усложнять","SLY"],В:["Зависящий от цели","RAV"],Г:["Тот, где смогу помочь другим","HUF"]}},
+{q:"Какое качество ты ценишь в себе больше всего?",a:{А:["Спокойствие","HUF"],Б:["Смелость","GRYF"],В:["Терпение","RAV"],Г:["Умение видеть суть","SLY"]}},
+{q:"Когда никто не смотрит — кем ты являешься на самом деле?",a:{А:["Тем, кто устал притворяться","HUF"],Б:["Тем, кто всё время ищет","RAV"],В:["Тем, кто знает больше, чем показывает","SLY"],Г:["Тем, кто просто хочет покоя","GRYF"]}}
+];
+
+/* ===== ЛОГИКА ===== */
+let i=0,score={GRYF:0,SLY:0,RAV:0,HUF:0};
+const sStart=document.getElementById('screen-start'),sQuiz=document.getElementById('screen-quiz'),sRes=document.getElementById('screen-result');
+const qEl=document.getElementById('q'),ans=document.getElementById('answers'),bar=document.getElementById('bar'),badge=document.getElementById('badge');
+const crestEl = document.getElementById('crest');
+const magicCandles = document.getElementById('magic-candles');
+const backgroundMusic = document.getElementById('background-music');
+const hatQuoteEl = document.getElementById('hat-quote');
+const founderContainer = document.getElementById('founder-container');
+const founderHistory = document.getElementById('founder-history');
+const historyToggle = document.getElementById('history-toggle');
+
+// Управление музыкой
+let isMusicPlaying = false;
+
+function toggleMusic() {
+    if (isMusicPlaying) {
+        backgroundMusic.pause();
+        document.querySelectorAll('.music-control').forEach(btn => btn.innerHTML = '🔇');
+    } else {
+        backgroundMusic.play().catch(e => console.log('Автовоспроизведение заблокировано'));
+        document.querySelectorAll('.music-control').forEach(btn => btn.innerHTML = '🎵');
+    }
+    isMusicPlaying = !isMusicPlaying;
+}
+
+// Инициализация кнопок музыки
+document.querySelectorAll('.music-control').forEach(btn => {
+    btn.onclick = toggleMusic;
+});
+
+document.getElementById('btn-start').onclick=start;
+document.getElementById('again').onclick=()=>location.reload();
+document.getElementById('share').onclick=shareResult;
+
+// Управление историей основателя
+historyToggle.onclick = function() {
+    if (founderContainer.style.display === 'none') {
+        founderContainer.style.display = 'block';
+        historyToggle.textContent = 'Скрыть историю';
+    } else {
+        founderContainer.style.display = 'none';
+        historyToggle.textContent = 'Показать историю';
+    }
+};
+
+function start(){
+  sStart.classList.remove('show');
+  sQuiz.classList.add('show');
+  i=0;
+  score={GRYF:0,SLY:0,RAV:0,HUF:0};
+  startMagicAnimations();
+  
+  // Автоматически включаем музыку при начале теста
+  if (!isMusicPlaying) {
+    backgroundMusic.volume = 0.4;
+    toggleMusic();
+  }
+  
+  render();
+}
+
+function startMagicAnimations() {
+  // Создаем летающие магические объекты
+  const magicObjects = [
+    {class: 'flying-candle', emoji: '🕯️', count: 8},
+    {class: 'flying-wand', emoji: '⚡', count: 5},
+    {class: 'flying-broom', emoji: '🧹', count: 3}
+  ];
+  
+  magicCandles.innerHTML = '';
+  
+  magicObjects.forEach(obj => {
+    for(let k = 0; k < obj.count; k++) {
+      const element = document.createElement('div');
+      element.className = obj.class;
+      element.innerHTML = obj.emoji;
+      element.style.left = Math.random() * 100 + 'vw';
+      element.style.top = Math.random() * 100 + 'vh';
+      element.style.animationDelay = (Math.random() * 10) + 's';
+      element.style.fontSize = (20 + Math.random() * 15) + 'px';
+      magicCandles.appendChild(element);
+    }
+  });
+}
+
+function render(){
+  const q=QUESTIONS[i],total=QUESTIONS.length;
+  badge.textContent=`Вопрос ${i+1} из ${total}`; bar.style.width=`${(i/total)*100}%`;
+  qEl.textContent=q.q; ans.innerHTML='';
+  for(const [ukLetter,[t,h]] of Object.entries(q.a)){
+    const b=document.createElement('button'); 
+    b.innerHTML=`<strong>${ukLetter}.</strong> ${t}`;
+    b.onclick=()=>{score[h]++;next();}; 
+    ans.appendChild(b);
+  }
+}
+function next(){ if(++i<QUESTIONS.length) render(); else finish(); }
+
+function finish(){
+  sQuiz.classList.remove('show'); 
+  sRes.classList.add('show');
+  const houseKey=Object.entries(score).sort((a,b)=>b[1]-a[1])[0][0],h=HOUSES[houseKey];
+  sRes.style.backgroundImage=h.bg;
+  
+  // Вставляем герб факультета в золотой круг
+  crestEl.src = h.crest;
+  crestEl.alt = `Герб ${h.name}`;
+  
+  // Скрываем историю по умолчанию
+  founderContainer.style.display = 'none';
+  founderHistory.textContent = h.founder;
+  historyToggle.textContent = 'Показать историю';
+  
+  // Сначала показываем интригующее сообщение
+  hatQuoteEl.textContent = "Шляпа задумчиво молчит...";
+  hatQuoteEl.className = "hat-quote";
+  
+  document.getElementById('desc').textContent=h.desc;
+  const tags=document.getElementById('tags'); tags.innerHTML=''; h.tags.forEach(t=>{const s=document.createElement('span');s.className='tag';s.textContent=t;tags.appendChild(s)});
+  document.getElementById('famous').textContent=`Известные личности: ${h.famous}`;
+  spawnMagic(42);
+  
+  // Через 1.5 секунды показываем результат с анимацией шепота
+  setTimeout(() => {
+    hatQuoteEl.textContent = h.quote;
+    hatQuoteEl.classList.add("hat-whisper");
+  }, 1500);
+  
+  if(window.Telegram&&Telegram.WebApp){Telegram.WebApp.ready();Telegram.WebApp.sendData(JSON.stringify({house:h.name,score}))}
+}
+
+function spawnMagic(n=30){
+  const magic=document.getElementById('magic'); magic.querySelectorAll('.spark').forEach(e=>e.remove());
+  for(let k=0;k<n;k++){const s=document.createElement('div'); s.className='spark'; s.style.left=Math.random()*100+'vw'; s.style.bottom='-10vh'; s.style.animationDelay=(Math.random()*8)+'s'; s.style.opacity=(.3+Math.random()*.7).toFixed(2); magic.appendChild(s);}
+}
+
+function shareResult(){
+  const title=document.getElementById('hat-quote').textContent, text=document.getElementById('desc').textContent, url=location.href;
+  if(navigator.share){navigator.share({title,text,url}).catch(()=>{});}else{navigator.clipboard.writeText(`${title}\n${text}\n${url}`).then(()=>alert('Скопировано — можно делиться!')).catch(()=>{});}
+}
+
+// Автоматически пытаемся включить музыку при загрузке
+document.addEventListener('DOMContentLoaded', function() {
+    backgroundMusic.volume = 0.4;
+});
+</script>
+</body>
+</html>
